@@ -75,14 +75,17 @@ int main(){
 	int *seq = (int*)calloc(1, sizeof(int));
 
 	int i;
-	for(i = 1; i <= n; i++){
+	for (i = 1; i <= n; i++){
 
         //recompute the whole series
         tribonacci(i, seq);
 
 		//print array
         int j;
-        for(/* complete code */
+        for (j = 0; j < i; j++){
+			int* currentAddr = &seq + j;
+			printf("%d ", *currentAddr);
+		}
 
 		//resize array, with realloc
         int newSize = i++;
