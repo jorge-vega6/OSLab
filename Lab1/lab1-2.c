@@ -46,7 +46,7 @@ int main(){
 
 //n=amount of numbers in the series to compute, seq=array to store series
 void tribonacci(int n, int* seq){
-    int* availAddr;
+    int *availAddr;
     if (n == 1) {
         availAddr = &seq;
         *availAddr = 0;
@@ -58,9 +58,9 @@ void tribonacci(int n, int* seq){
         *availAddr = 1;
     } else {
         availAddr = &seq + n - 1;
-        int* minusOneAddr = availAddr - 1;
-        int* minusTwoAddr = availAddr - 2;
-        int* minusThreeAddr = availAddr - 3;
+        int *minusOneAddr = availAddr - 1;
+        int *minusTwoAddr = availAddr - 2;
+        int *minusThreeAddr = availAddr - 3;
         *availAddr = *minusOneAddr + *minusTwoAddr + *minusThreeAddr;
     }
 }
