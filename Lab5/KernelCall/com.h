@@ -351,7 +351,7 @@
 #  define SYS_STATECTL (KERNEL_CALL + 55)	/* sys_statectl() */
 
 #  define SYS_SAFEMEMSET (KERNEL_CALL + 56)	/* sys_safememset() */
-#  define SYS_SETEDF (KERNEL_CALL + 57)	/* sys_setedf() */
+#  define SYS_SETEDF (KERNEL_CALL + 57) /* sys_setedf() */
 
 /* Total */
 #define NR_SYS_CALLS	58	/* number of kernel calls */
