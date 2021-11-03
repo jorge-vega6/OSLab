@@ -1538,10 +1538,9 @@ void enqueue(
   if (!rdy_head[q]) {		/* add to empty queue */
       rdy_head[q] = rdy_tail[q] = rp; 		/* create a new queue */
       rp->p_nextready = NULL;		/* mark new end */
-  } 
-  else {					/* add to tail of queue */
-	  node_t **prev;
-	  node_t **next;
+  } else {					/* add to tail of queue */
+	  struct proc *prev;
+	  struct proc *next;
 	  if (rp->deadline == 0) { //if deadline is 0 then place at the end of the line
 		  rdy_tail[q]->p_nextready = rp;		/* chain tail of queue */
 		  rdy_tail[q] = rp;				/* set new queue tail */
@@ -1552,7 +1551,7 @@ void enqueue(
 		  rdy_head[q] = rp; //set rp as new head
 	  } else {
 		  prev = rdy_head[q]; //save head as previous node
-		  next = rdy_tail[q]->p_nextready; //save next node
+		  next = rdy_head[q]->p_nextready; //save next node
 		  if (next == NULL) { //if there was only 1 then just append last
 			  rdy_tail[q]->p_nextready = rp;		/* chain tail of queue */
 			  rdy_tail[q] = rp;				/* set new queue tail */
