@@ -19,13 +19,32 @@ void debug(Disk *disk) {
     disk->readDisk(disk, 0, block.Data);
     
     printf("SuperBlock:\n");
+    printf("    magic number is %s\n", (block.Super.MagicNumber == MAGIC_NUMBER ? "valid" : "invalid"));
     printf("    %u blocks\n"         , block.Super.Blocks);
     printf("    %u inode blocks\n"   , block.Super.InodeBlocks);
     printf("    %u inodes\n"         , block.Super.Inodes);
     
     
     // Read Inode blocks
-    
+    int inodeBlocksNum = block.Super.InodeBlocks; //acquire number of inodes in inode block
+    for (int i = 1; i <= inodeBlocksNum; i++){ //traverse inodes in disk
+        disk->readDisk(disk, i, block.Data); //read next block onto block.Data (block of inodes)
+        for (unsigned int j = 0; j < INODES_PER_BLOCK; j++){ //traverse the inodes in the block of inodes
+            Inode inode = block.Inodes[j]; //get current inode
+            if (inode.Valid == 0){
+                continue; //skip inode if not valid
+            }
+            printf("Inode %d:\n", j); //print valid inode
+            printf("    size: %d bytes\n", inode.Size);
+            int directBlockCount = 0;
+            for (unsigned int k = 0; k < POINTERS_PER_INODE; k++){ //traverse pointers to gain count
+                if (inode.Direct[k]){
+                    directBlockCount++;
+                }
+            }
+            printf("    direct blocks: %d\n", directBlockCount);
+        }
+    }
 }
 
 // Format file system ----------------------------------------------------------
