@@ -209,8 +209,24 @@ bool removeInode(size_t inumber) {
 // Inode stat ------------------------------------------------------------------
 
 size_t stat(size_t inumber) {
+    Block block;
+    currentDisk->readDisk(currentDisk, 0, block.Data);
+
+    int iNodeBlock = (inumber + INODES_PER_BLOCK - 1) / INODES_PER_BLOCK;
+    
+    if (iNodeBlock > block.Super.InodeBlocks){
+        return -1; //invalid block number
+    }
+
     // Load inode information
-    return 0;
+    currentDisk->readDisk(currentDisk, iNodeBlock, block.Data);
+    Inode currentInode = block.Inodes[inumber % INODES_PER_BLOCK];
+
+    if (currentInode.Valid){
+        return currentInode.Size;
+    }
+    
+    return -1;
 }
 
 // Read from inode -------------------------------------------------------------
