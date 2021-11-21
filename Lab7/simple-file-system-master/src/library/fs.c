@@ -12,6 +12,8 @@
 int * bitmap = NULL; //free block bitmap
 int bitmapLength; //size of bitmap
 
+Disk * currentDisk; //keep access to the current disk
+
 // Debug file system -----------------------------------------------------------
 
 void debug(Disk *disk) {
@@ -105,6 +107,7 @@ bool mount(Disk *disk) {
     }
 
     // Set device and mount
+    currentDisk = disk;
     disk->mount(disk);
 
     // Allocate free block bitmap
@@ -125,13 +128,16 @@ bool mount(Disk *disk) {
         }
     }
 
-    return true;
+    return disk->mounted(disk); //verify that it has actually been mounted
 }
 
 // Create inode ----------------------------------------------------------------
 
 size_t create() {
     // Locate free inode in inode table
+    // if (bitmap == NULL){ //no bitmap is set
+    //     return -1;
+    // } else if (!())
 
     // Record inode if found
     return 0;
