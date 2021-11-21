@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdbool.h>
 
+int * bitmap = NULL; //free block bitmap
+
 // Debug file system -----------------------------------------------------------
 
 void debug(Disk *disk) {
@@ -51,9 +53,33 @@ void debug(Disk *disk) {
 
 bool format(Disk *disk) {
     
+    if (disk->mounted(disk)){
+        return false; //can't format disk if it's already mounted
+    } else if (bitmap != NULL){
+        return false; //return false if there's already a bitmap
+    }
+
     // Write superblock
-    
+    Block block;
+    block.Super.MagicNumber = MAGIC_NUMBER; //set magic number for superblock
+    block.Super.Blocks = disk->size(disk); //get number of blocks in disk
+    uint32_t newInodeBlocks = block.Super.Blocks / 10;
+    if (block.Super.Blocks % 10 != 0){ //if it's not divisible by 10, it has a decimal part
+        newInodeBlocks++; //add 1 to round up
+    }
+    block.Super.InodeBlocks = newInodeBlocks;
+    block.Super.Inodes = INODES_PER_BLOCK * block.Super.InodeBlocks; //set total number of inodes
+
+    disk->writeDisk(disk, 0, block.Data);
+
     // Clear all other blocks
+    Block emptyBlock;
+    memset(emptyBlock.Data, 0, BLOCK_SIZE); //fill the empty block with 0s
+    
+    //write to the disk the empty blocks and clear them
+    for (int i = 0; i < disk->size(disk); i++){
+        disk->writeDisk(disk, i, emptyBlock.Data);
+    }
     
     return true;
 }
