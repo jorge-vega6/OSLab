@@ -177,13 +177,33 @@ size_t create() {
 
 bool removeInode(size_t inumber) {
     // Load inode information
+    int iNodeBlock = (inumber + INODES_PER_BLOCK - 1) / INODES_PER_BLOCK;
+    Block block; 
+    currentDisk->readDisk(currentDisk, 0, block.Data);
 
-    // Free direct blocks
+    //check if calculated inode block number exceeds
+    if (iNodeBlock > block.Super.InodeBlocks){
+        return false;
+    }
 
-    // Free indirect blocks
+    currentDisk->readDisk(currentDisk, iNodeBlock, block.Data);
+    Inode currentInode = block.Inodes[inumber % INODES_PER_BLOCK];
 
-    // Clear inode in inode table
-    return true;
+    if (currentInode.Valid){
+        // Free direct blocks
+        memset(currentInode.Direct, 0, POINTERS_PER_INODE);
+
+        // Free indirect blocks
+        block.Pointers[currentInode.Indirect] = NULL;
+
+        // Clear inode in inode table
+        currentInode = (Inode){0};
+        block.Inodes[inumber % INODES_PER_BLOCK] = currentInode;
+        currentDisk->writeDisk(currentDisk, iNodeBlock, block.Data);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // Inode stat ------------------------------------------------------------------
