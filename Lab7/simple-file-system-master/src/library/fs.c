@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 int * bitmap = NULL; //free block bitmap
+int bitmapLength; //size of bitmap
 
 // Debug file system -----------------------------------------------------------
 
@@ -89,13 +90,40 @@ bool format(Disk *disk) {
 // Mount file system -----------------------------------------------------------
 
 bool mount(Disk *disk) {
+    //can't mount disk if it's already mounted
+    if (disk->mounted(disk)){
+        return false;
+    }
+
     // Read superblock
+    Block block;
+    disk->readDisk(disk, 0, block.Data);
+
+    //check magic number
+    if (block.Super.MagicNumber != MAGIC_NUMBER){
+        return false;
+    }
 
     // Set device and mount
-
-    // Copy metadata
+    disk->mount(disk);
 
     // Allocate free block bitmap
+    bitmap = calloc(block.Super.Blocks, sizeof(int));
+    bitmapLength = block.Super.Blocks;
+
+    //scan blocks to fill in bitmap
+    Block currentBlock;
+    Inode currentInode;
+
+    for (int i = 1; i < block.Super.InodeBlocks; i++){
+        disk->readDisk(disk, i, currentBlock.Data);
+        for (int j = 0; j < INODES_PER_BLOCK; j++){
+            currentInode = currentBlock.Inodes[j];
+            if (currentInode.Valid){
+                bitmap[i] = 1; //set entry in bitmap
+            }
+        }
+    }
 
     return true;
 }
