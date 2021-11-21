@@ -135,12 +135,42 @@ bool mount(Disk *disk) {
 
 size_t create() {
     // Locate free inode in inode table
-    // if (bitmap == NULL){ //no bitmap is set
-    //     return -1;
-    // } else if (!())
+    if (bitmap == NULL){ //no bitmap is set
+        return -1;
+    } else if (!(currentDisk->mounted(currentDisk))){ //disk hasn't been mounted
+        return -1;
+    }
 
-    // Record inode if found
-    return 0;
+    Block block;
+    currentDisk->readDisk(currentDisk, 0, block.Data);
+
+    //traverse blocks and find empty inode
+    for (int i = 1; i < block.Super.Blocks; i++){
+        currentDisk->readDisk(currentDisk, i, block.Data); //read current inode block
+        Inode currentInode;
+        
+        // Record inode if found
+        for (int j = 0; j < POINTERS_PER_BLOCK; j++){
+            if (j == 0 && i == 1){
+                j = 1;
+            }
+
+            currentInode = block.Inodes[j]; //read the current inode
+            if (currentInode.Valid == 0){ //invalid, so we found an empty inode to use
+                currentInode.Valid = 1; //set valid bit
+                currentInode.Size = 0; //init size to 0
+                memset(currentInode.Direct, 0, sizeof(currentInode.Direct));
+                currentInode.Indirect = 0;
+                bitmap[i] = 1; //set entry in bitmap
+                block.Inodes[j] = currentInode; //set inode in block
+                currentDisk->writeDisk(currentDisk, i, block.Data); //write the data
+
+                return j + (i - 1) * INODES_PER_BLOCK; //return inumber
+            }
+        }
+    }
+
+    return -1; //return -1 as a default if all fails
 }
 
 // Remove inode ----------------------------------------------------------------
