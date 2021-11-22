@@ -11,6 +11,7 @@
 
 int * bitmap = NULL; //free block bitmap
 int bitmapLength; //size of bitmap
+int currNumberOfInodes; 
 
 Disk * currentDisk; //keep access to the current disk
 
@@ -127,6 +128,7 @@ bool mount(Disk *disk) {
     // Set device and mount
     currentDisk = disk;
     disk->mount(disk);
+    currNumberOfInodes = block.Super.Inodes;
 
     // Allocate free block bitmap
     bitmap = calloc(block.Super.Blocks, sizeof(int));
@@ -251,11 +253,69 @@ size_t stat(size_t inumber) {
 
 size_t readInode(size_t inumber, char *data, size_t length, size_t offset) {
     // Load inode information
+    Inode currentInode;
+    Block block;
+
+    int iNodeBlock, iNodeOffset;
+    int startRead, needToRead, nextToRead;
+    int read = 0;
+    int flag = 0;
+
+    if (inumber >= currNumberOfInodes){
+        flag = 1;
+    }
+
+    iNodeBlock = 1 + (inumber / INODES_PER_BLOCK);
+    currentDisk->readDisk(currentDisk, iNodeBlock, block.Data);
+    iNodeOffset = inumber % INODES_PER_BLOCK;
+    currentInode = block.Inodes[iNodeOffset];
+
+    if (flag == 1){
+        return -1;
+    } else if (offset > currentInode.Size){
+        return -1;
+    }
 
     // Adjust length
+    int start = offset / BLOCK_SIZE;
+    length = (length < (currentInode.Size - offset) ? length : (currentInode.Size - offset));
 
     // Read block and copy to data
-    return 0;
+    Block indirectBlock;
+    if (((offset + length) / BLOCK_SIZE) > POINTERS_PER_INODE){
+        if (currentInode.Indirect == 0){
+            return -1;
+        }
+        currentDisk->readDisk(currentDisk, currentInode.Indirect, indirectBlock.Data);
+    }
+
+    for (int i = start; read < length; i++){
+        if (i < POINTERS_PER_INODE){
+            needToRead = currentInode.Direct[i];
+        } else {
+            nextToRead = indirectBlock.Pointers[i - POINTERS_PER_INODE];
+        }
+
+        if (nextToRead == 0){
+            return -1;
+        }
+
+        Block block;
+        currentDisk->readDisk(currentDisk, nextToRead, block.Data);
+
+        if (read == 0){
+            startRead = offset % BLOCK_SIZE;
+            needToRead = ((BLOCK_SIZE - startRead) < length ? BLOCK_SIZE : length);
+        } else {
+            startRead = 0;
+            needToRead = (BLOCK_SIZE < (length - read) ? BLOCK_SIZE : (length - read));
+        }
+
+        memcpy(data + read, block.Data + startRead, needToRead);
+        read += needToRead;
+    }
+
+    return read;
 }
 
 // Write to inode --------------------------------------------------------------
