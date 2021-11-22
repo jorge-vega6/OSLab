@@ -14,6 +14,24 @@ int bitmapLength; //size of bitmap
 
 Disk * currentDisk; //keep access to the current disk
 
+int getBlock(){
+    if (bitmap == NULL){
+        return -1;
+    } else if (!(currentDisk->mounted(currentDisk))){
+        return -1;
+    }
+
+    Block block;
+    currentDisk->readDisk(currentDisk, 0, block.Data);
+    for (int i = block.Super.InodeBlocks + 1; i < bitmapLength; i++){
+        if (bitmap[i] == 0){
+            memset(&bitmap[i], 0, sizeof(bitmap[0]));
+            return i;
+        }
+    }
+    return -1;
+}
+
 // Debug file system -----------------------------------------------------------
 
 void debug(Disk *disk) {
@@ -244,7 +262,86 @@ size_t readInode(size_t inumber, char *data, size_t length, size_t offset) {
 
 size_t writeInode(size_t inumber, char *data, size_t length, size_t offset) {
     // Load inode
-    
-    // Write block and copy to data
-    return 0;
+    if (bitmap == NULL){
+        return -1;
+    } else if (!(currentDisk->mounted(currentDisk))){
+        return -1;
+    }
+
+    Block block; 
+    currentDisk->readDisk(currentDisk, 0, block.Data);
+
+    //check if it's a valid inumber
+    if (inumber == 0 || inumber > block.Super.Inodes){
+        return -1;
+    }
+
+    int bytesReady = 0;
+    int iNodeBlock = (inumber + INODES_PER_BLOCK - 1) / INODES_PER_BLOCK;
+    currentDisk->readDisk(currentDisk, iNodeBlock, block.Data);
+
+    Inode currentInode = block.Inodes[inumber % INODES_PER_BLOCK];
+    if (currentInode.Valid){
+        int i = (int)floor(offset / BLOCK_SIZE);
+        Block tmpBlock;
+        
+        while (i < POINTERS_PER_INODE && bytesReady < length){
+            if (currentInode.Direct[i] == 0){
+                int j = getBlock();
+                if (j == -1){
+                    return -1;
+                }
+                currentInode.Direct[i] = j;
+                bitmap[j] = 1;
+            }
+            
+            int slice = BLOCK_SIZE;
+            if (slice + bytesReady > length){
+                slice = length - bytesReady;
+            }
+            
+            strncpy(tmpBlock.Data, data, slice);
+            data += slice;
+            currentDisk->writeDisk(currentDisk, currentInode.Direct[i], tmpBlock.Data);
+            
+            currentInode.Size += slice;
+            bytesReady += slice;
+            i++;
+        }
+        if (bytesReady < length){
+            Block indirectBlock;
+            if (currentInode.Indirect == 0){
+                int k = getBlock();
+                if (k == -1){
+                    return -1;
+                }
+                currentInode.Indirect = k;
+                bitmap[k] = 1;
+            }
+            currentDisk->readDisk(currentDisk, currentInode.Indirect, indirectBlock.Data);
+            for (int l = 0; bytesReady < length; l++){
+                if (indirectBlock.Pointers[l] == 0){
+                    int m = getBlock();
+                    if (m == -1){
+                        return -1;
+                    }
+                    currentInode.Direct[i] = m;
+                }
+
+                int slice = BLOCK_SIZE;
+                if (slice + bytesReady > length){
+                    slice = length - bytesReady;
+                }
+                strncpy(tmpBlock.Data, data, slice);
+                data += slice;
+                currentDisk->writeDisk(currentDisk, currentInode.Direct[i], tmpBlock.Data);
+                currentInode.Size += slice;
+                bytesReady += slice;
+            }
+        }
+        block.Inodes[inumber % INODES_PER_BLOCK] = currentInode;
+        currentDisk->writeDisk(currentDisk, iNodeBlock, block.Data);
+        return bytesReady;
+    }
+    return -1;
 }
